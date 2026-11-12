@@ -1,0 +1,17 @@
+import { Transform } from 'class-transformer';
+import { IsEmail, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+
+const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
+
+export class JoinMembershipDto {
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(80)
+  name: string;
+
+  @Transform(trim)
+  @IsEmail()
+  @MaxLength(160)
+  email: string;
+}

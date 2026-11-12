@@ -1,0 +1,20 @@
+# Runs the studio on http://localhost:4400. Copy .env.example to .env and fill it in first.
+# Customers must reach the site over HTTPS (PUBLIC_URL): put it behind your reverse proxy or a
+# tunnel, and point SettleKing's webhook at <PUBLIC_URL>/api/webhooks/settleking.
+services:
+  dance-studio:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "${PORT_BIND:-127.0.0.1:4400}:4400"
+    volumes:
+      - dance-data:/data
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  dance-data:
