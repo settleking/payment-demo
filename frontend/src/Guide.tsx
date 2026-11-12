@@ -61,7 +61,7 @@ export function Guide() {
       where: 'Home › Plans › Unlimited Monthly › On SettleKing',
       steps: [
         'Enter a name and email, choose On SettleKing and continue.',
-        'On SettleKing: sign in, choose wallet or card, tick “I agree”, enter the emailed code.',
+        'On SettleKing: sign in, choose wallet, card or bank account, tick “I agree”, enter the emailed code.',
       ],
       expect: [
         'Back at the studio: “You’re in”, status Active, next charge in 7 days, no charge yet.',

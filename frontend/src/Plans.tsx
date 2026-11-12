@@ -66,7 +66,7 @@ export function Plans({ config, onApproved }: { config: SiteConfig; onApproved: 
           <span className="kicker">Subscriptions &amp; pay as you go</span>
           <h2>Approve once. Dance all season.</h2>
           <p>
-            Approve a plan once with SettleKing and pay by SettleKing wallet or card. You see every charge, set your own
+            Approve a plan once with SettleKing and pay by SettleKing wallet, card or bank account. You see every charge, set your own
             limits and can cancel at any time in your SettleKing account.
           </p>
         </div>
@@ -130,7 +130,7 @@ export function Plans({ config, onApproved }: { config: SiteConfig; onApproved: 
                 {busy ? 'Setting up…' : 'Continue to approve with SettleKing'}
               </button>
               <p className="fine">
-                Nothing is charged until you approve. You choose your wallet or a card on SettleKing and confirm with a
+                Nothing is charged until you approve. You choose your wallet, a card or a bank account on SettleKing and confirm with a
                 code.
               </p>
             </form>

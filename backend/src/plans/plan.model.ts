@@ -25,7 +25,7 @@ export interface PlanCharge {
   attempt?: number;
   reference?: string | null;
   description?: string | null;
-  fundingMethod?: 'wallet' | 'card' | null;
+  fundingMethod?: 'wallet' | 'card' | 'ach' | null;
   viaDeposit?: boolean;
   failureCode?: string | null;
   failureMessage?: string | null;

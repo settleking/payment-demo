@@ -42,13 +42,13 @@ export type PlanStatus = 'proposing' | 'pending' | 'active' | 'suspended' | 'can
 
 export interface PlanCharge {
   id?: string;
-  status: 'requesting' | 'processing' | 'succeeded' | 'failed' | 'rejected';
+  status: 'requesting' | 'processing' | 'succeeded' | 'failed' | 'rejected' | 'returned';
   amount: number;
   cycle?: number | null;
   attempt?: number;
   reference?: string | null;
   description?: string | null;
-  fundingMethod?: 'wallet' | 'card' | null;
+  fundingMethod?: 'wallet' | 'card' | 'ach' | null;
   viaDeposit?: boolean;
   failureCode?: string | null;
   failureMessage?: string | null;
@@ -68,7 +68,7 @@ export interface CustomerPlan {
   status: PlanStatus;
   approvedVia: 'hosted' | 'widget';
   approvalUrl?: string | null;
-  funding?: { method: 'wallet' | 'card'; cardBrand?: string | null; cardLast4?: string | null } | null;
+  funding?: { method: 'wallet' | 'card' | 'ach'; cardBrand?: string | null; cardLast4?: string | null } | null;
   nextChargeAt?: string | null;
   chargedThisMonth?: number;
   endedBy?: string | null;
@@ -254,11 +254,13 @@ export const CHARGE_STATUS: Record<PlanCharge['status'], string> = {
   succeeded: 'Paid',
   failed: 'Failed',
   rejected: 'Refused',
+  returned: 'Returned by the bank',
 };
 
 export function fundingLabel(funding: CustomerPlan['funding']): string {
   if (!funding) return '—';
   if (funding.method === 'wallet') return 'SettleKing wallet';
+  if (funding.method === 'ach') return funding.cardLast4 ? `Bank account •••• ${funding.cardLast4}` : 'Bank account';
   const brand = funding.cardBrand ? funding.cardBrand[0].toUpperCase() + funding.cardBrand.slice(1) : 'Card';
   return `${brand} •••• ${funding.cardLast4 ?? '????'}`;
 }

@@ -240,7 +240,7 @@ export interface CreateAgreementRequest {
   maxAmountPerCharge?: Money;
   /** on_demand: the most all charges in a calendar month (UTC) may add up to. */
   maxAmountPerMonth?: Money;
-  paymentMethods?: ('wallet' | 'card')[];
+  paymentMethods?: ('wallet' | 'card' | 'ach')[];
   /** Where the approval page sends the customer back to; https only. */
   returnUrl?: string;
   /** Only the SettleKing account that verified this email can approve the agreement. */
@@ -249,7 +249,8 @@ export interface CreateAgreementRequest {
 }
 
 export interface AgreementFunding {
-  method: 'wallet' | 'card';
+  /** 'ach' is a bank account saved with the merchant; cardLast4 holds its last digits. */
+  method: 'wallet' | 'card' | 'ach';
   cardBrand?: string | null;
   cardLast4?: string | null;
 }
@@ -282,7 +283,7 @@ export interface Agreement {
   endReason?: string | null;
 }
 
-export type AgreementChargeStatus = 'processing' | 'succeeded' | 'failed' | 'rejected';
+export type AgreementChargeStatus = 'processing' | 'succeeded' | 'failed' | 'rejected' | 'returned';
 
 /** One charge under an agreement. */
 export interface AgreementCharge {
@@ -292,7 +293,7 @@ export interface AgreementCharge {
   amount: Money;
   cycle?: number | null;
   attempt: number;
-  fundingMethod?: 'wallet' | 'card' | null;
+  fundingMethod?: 'wallet' | 'card' | 'ach' | null;
   /** The wallet was short and the customer's bank covered the rest first. */
   viaDeposit: boolean;
   failureCode?: string | null;
@@ -319,7 +320,7 @@ export interface AgreementUpdated {
   reference: string;
   type: AgreementType;
   status: AgreementStatus;
-  fundingMethod: 'wallet' | 'card' | null;
+  fundingMethod: 'wallet' | 'card' | 'ach' | null;
   endedBy: 'payer' | 'merchant' | 'system' | null;
   endReason: string | null;
   nextChargeAt: string | null;

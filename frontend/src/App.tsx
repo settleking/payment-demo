@@ -133,7 +133,7 @@ export function App() {
               <li>One class: SettleKing checkout or pay right here</li>
               <li>Subscriptions, with a free trial or charged today</li>
               <li>Pay as you dance, within limits you approve</li>
-              <li>Wallet or card, with bank top-up when your wallet is short</li>
+              <li>Wallet, card or bank account, with bank top-up when your wallet is short</li>
             </ul>
             <span className="powered">
               <img src="/settleking.png" alt="" width={22} height={22} /> Payments by SettleKing

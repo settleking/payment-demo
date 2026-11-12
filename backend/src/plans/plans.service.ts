@@ -280,7 +280,8 @@ export class PlansService {
       reference: subscription.reference,
       description: `${this.config.studioName}: ${plan.title}`,
       merchantName: this.config.settleking.merchantName,
-      paymentMethods: ['wallet', 'card'] as ('wallet' | 'card')[],
+      // All three are also the default; "ach" is a bank account the customer saves with the studio.
+      paymentMethods: ['wallet', 'card', 'ach'] as ('wallet' | 'card' | 'ach')[],
       returnUrl: `${this.config.publicUrl}/?plan=${encodeURIComponent(subscription.id)}`,
       // Only the customer who signed up here can approve: a forwarded link is useless to others.
       payerEmail: subscription.email,

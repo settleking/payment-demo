@@ -81,7 +81,7 @@ describe('PlansService', () => {
       status: 'pending',
       type: 'recurring',
       reference: 'TDS-P1001',
-      paymentMethods: ['wallet', 'card'],
+      paymentMethods: ['wallet', 'card', 'ach'],
       approvalUrl: `https://pay.example.test/agreements/${agreementId}`,
       ...overrides,
     };
@@ -137,7 +137,7 @@ describe('PlansService', () => {
       amount: { currency: 'USD', value: '79.00' },
       interval: 'month',
       intervalCount: 1,
-      paymentMethods: ['wallet', 'card'],
+      paymentMethods: ['wallet', 'card', 'ach'],
       returnUrl: `https://dance.example.test/?plan=${plan().id}`,
       payerEmail: 'ada@example.test',
     });
