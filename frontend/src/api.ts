@@ -30,7 +30,9 @@ export interface Plan {
   tagline: string;
   perks: string[];
   amount?: number;
-  interval?: 'day' | 'week' | 'month' | 'year';
+  interval?: 'minute' | 'day' | 'week' | 'month' | 'year';
+  /** Every this many intervals; 1 when absent. */
+  intervalCount?: number;
   trialDays?: number;
   maxPerCharge?: number;
   maxPerMonth?: number;
@@ -216,12 +218,17 @@ export const money = (cents: number) =>
 export const cardLabel = (card?: CardSummary) =>
   card ? `${card.brand ? card.brand[0].toUpperCase() + card.brand.slice(1) : 'Card'} •••• ${card.last4 ?? '????'}` : '';
 
-const INTERVAL_WORDS: Record<NonNullable<Plan['interval']>, string> = { day: 'day', week: 'week', month: 'month', year: 'year' };
+/** "month", or "10 minutes" for a plan charged every few intervals. */
+export function planInterval(plan: Plan): string {
+  const unit = plan.interval ?? 'month';
+  const count = plan.intervalCount ?? 1;
+  return count > 1 ? `${count} ${unit}s` : unit;
+}
 
 /** "$79 / month" or "up to $40 a class" */
 export function planPrice(plan: Plan): string {
   if (plan.type === 'on_demand') return `up to ${money(plan.maxPerCharge ?? 0)} a class`;
-  return `${money(plan.amount ?? 0)} / ${INTERVAL_WORDS[plan.interval ?? 'month']}`;
+  return `${money(plan.amount ?? 0)} / ${planInterval(plan)}`;
 }
 
 export function planTerms(plan: Plan): string {
@@ -229,7 +236,7 @@ export function planTerms(plan: Plan): string {
     return `Charged after each class, never more than ${money(plan.maxPerCharge ?? 0)} at a time or ${money(plan.maxPerMonth ?? 0)} a month.`;
   }
   const first = plan.trialDays ? `First charge after a ${plan.trialDays}-day free trial` : 'First charge when you approve';
-  return `${money(plan.amount ?? 0)} every ${INTERVAL_WORDS[plan.interval ?? 'month']}. ${first}.`;
+  return `${money(plan.amount ?? 0)} every ${planInterval(plan)}. ${first}.`;
 }
 
 export const PLAN_STATUS: Record<PlanStatus, string> = {

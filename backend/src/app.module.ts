@@ -8,7 +8,7 @@ import { AppConfig } from './config';
 import { AdminGuard } from './memberships/admin.guard';
 import { AdminMembersController, MembershipsController } from './memberships/memberships.controller';
 import { MembershipsService } from './memberships/memberships.service';
-import { PLANS } from './plans/plan.catalog';
+import { plansFor } from './plans/plan.catalog';
 import { AdminPlansController, PlansController } from './plans/plans.controller';
 import { PlansService } from './plans/plans.service';
 import { SettleKingClient } from './settleking/settleking.client';
@@ -43,7 +43,7 @@ class CatalogController {
       studioName: this.config.studioName,
       widget: this.config.widgetsConfigured ? { publishableKey, payUrl } : null,
       membership: { amount: this.config.membershipAmount, currency: 'USD' },
-      plans: PLANS,
+      plans: plansFor(this.config.planTestMinutes),
       payUrl: this.config.settleking.payUrl,
       appUrl: this.config.settleking.appUrl,
     };

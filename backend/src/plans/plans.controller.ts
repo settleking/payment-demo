@@ -4,16 +4,20 @@ import { AdminGuard } from '../memberships/admin.guard';
 import { CancelPlanDto } from './dto/cancel-plan.dto';
 import { ChargePlanDto } from './dto/charge-plan.dto';
 import { StartPlanDto } from './dto/start-plan.dto';
-import { PLANS } from './plan.catalog';
+import { AppConfig } from '../config';
+import { plansFor } from './plan.catalog';
 import { PlansService } from './plans.service';
 
 @Controller('plans')
 export class PlansController {
-  constructor(private readonly plans: PlansService) {}
+  constructor(
+    private readonly plans: PlansService,
+    private readonly config: AppConfig,
+  ) {}
 
   @Get()
   catalog() {
-    return PLANS;
+    return plansFor(this.config.planTestMinutes);
   }
 
   /** Proposes the plan's agreement; returns SettleKing's approval link or a widget client secret. */

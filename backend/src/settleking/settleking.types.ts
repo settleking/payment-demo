@@ -221,7 +221,8 @@ export const PAYMENT_REVERSED = 'MERCHANT_PAYMENT_REVERSED';
  */
 export type AgreementType = 'recurring' | 'on_demand';
 export type AgreementStatus = 'pending' | 'active' | 'suspended' | 'cancelled' | 'expired';
-export type AgreementInterval = 'day' | 'week' | 'month' | 'year';
+/** `minute` exists only in SettleKing's test environments (every 10 to 1440 minutes). */
+export type AgreementInterval = 'minute' | 'day' | 'week' | 'month' | 'year';
 
 export interface CreateAgreementRequest {
   type: AgreementType;

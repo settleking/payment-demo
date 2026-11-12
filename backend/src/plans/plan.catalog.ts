@@ -15,6 +15,8 @@ export interface Plan {
   /** recurring */
   amount?: number;
   interval?: AgreementInterval;
+  /** recurring: every this many intervals; 1 when absent. */
+  intervalCount?: number;
   /** recurring: days before the first charge. */
   trialDays?: number;
   /** on_demand */
@@ -53,6 +55,28 @@ export const PLANS: Plan[] = [
   },
 ];
 
-export function findPlan(id: string): Plan | undefined {
-  return PLANS.find((plan) => plan.id === id);
+/**
+ * A plan charged every few minutes, for watching several billing cycles in one sitting. Offered
+ * only when PLAN_TEST_MINUTES is set, and only SettleKing's test environments accept it.
+ */
+export function minutePlan(minutes: number): Plan {
+  return {
+    id: 'minutes',
+    type: 'recurring',
+    title: 'Quick Test',
+    tagline: `Charged every ${minutes} minutes, to watch renewals happen.`,
+    perks: ['For testing only', 'First charge when you approve', 'Cancel when you have seen enough'],
+    amount: 100,
+    interval: 'minute',
+    intervalCount: minutes,
+  };
+}
+
+/** The plans this site offers: the studio's catalog, plus the test plan when it is switched on. */
+export function plansFor(testMinutes: number | null): Plan[] {
+  return testMinutes ? [...PLANS, minutePlan(testMinutes)] : PLANS;
+}
+
+export function findPlan(id: string, testMinutes: number | null = null): Plan | undefined {
+  return plansFor(testMinutes).find((plan) => plan.id === id);
 }

@@ -26,6 +26,7 @@ describe('PlansService', () => {
   let store: JsonStore;
   let settleking: jest.Mocked<Client>;
   let plans: PlansService;
+  let config: AppConfig;
   let webhooks: WebhooksService;
 
   beforeEach(async () => {
@@ -37,7 +38,7 @@ describe('PlansService', () => {
     process.env.SETTLEKING_WIDGET_ID = widgetId;
     process.env.SETTLEKING_PUBLISHABLE_KEY = 'pk_test_abc';
     process.env.PUBLIC_URL = 'https://dance.example.test';
-    const config = new AppConfig();
+    config = new AppConfig();
     store = new JsonStore(config);
     await store.onModuleInit();
     settleking = {
@@ -144,6 +145,28 @@ describe('PlansService', () => {
     const firstCharge = Date.parse(request.firstChargeAt!);
     expect(firstCharge - before).toBeGreaterThanOrEqual(7 * 24 * 3600_000 - 1000);
     expect(plan()).toMatchObject({ status: 'pending', agreementId, email: 'ada@example.test' });
+  });
+
+  it('does not offer the minute test plan unless it is switched on', async () => {
+    await expect(
+      plans.start({ planId: 'minutes', name: 'Ada', email: 'ada@example.test', approveVia: 'hosted' }),
+    ).rejects.toThrow('Choose a plan');
+    expect(settleking.createAgreement).not.toHaveBeenCalled();
+  });
+
+  it('proposes the test plan every PLAN_TEST_MINUTES minutes when it is switched on', async () => {
+    Object.assign(config, { planTestMinutes: 10 });
+
+    await plans.start({ planId: 'minutes', name: 'Ada', email: 'ada@example.test', approveVia: 'hosted' });
+
+    const [request] = settleking.createAgreement.mock.calls[0];
+    expect(request).toMatchObject({
+      type: 'recurring',
+      amount: { currency: 'USD', value: '1.00' },
+      interval: 'minute',
+      intervalCount: 10,
+    });
+    expect(request.firstChargeAt).toBeUndefined();
   });
 
   it('proposes pay-as-you-dance with per-charge and monthly limits only', async () => {

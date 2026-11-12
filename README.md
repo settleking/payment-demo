@@ -293,6 +293,7 @@ Point your tunnel at `:5180` in that case, and add that origin to the widget's a
 | `SETTLEKING_APP_URL` | SettleKing's web app, default `https://app.stage.settleking.com`; the page links customers there to manage plans and limits |
 | `SETTLEKING_PAY_URL` | SettleKing's payment origin, default `https://pay.stage.settleking.com`; the page loads `<SETTLEKING_PAY_URL>/widget/v1/settleking.js` |
 | `ADMIN_TOKEN` | Token the studio admin page sends as `X-Admin-Token`; empty turns the admin API off (generate with `openssl rand -base64 32`) |
+| `PLAN_TEST_MINUTES` | Testing only. A whole number from 10 to 1440 adds a *Quick Test* plan ($1, charged every that many minutes) so several renewals can be watched in one sitting. Only SettleKing's test environments accept minute intervals; empty (the default) offers no such plan |
 | `DATA_DIR` | Where bookings and members are stored (`data/db.json`; a JSON file keeps the sample dependency-free) |
 
 ## API

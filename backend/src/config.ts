@@ -40,6 +40,12 @@ export class AppConfig {
   /** The monthly membership the studio admin charges to members' saved cards, in US cents. */
   readonly membershipAmount = 4900;
 
+  /**
+   * Adds a "Quick Test" plan charged every this many minutes (10 to 1440). Unset: no such plan.
+   * Only SettleKing's test environments accept minute intervals.
+   */
+  readonly planTestMinutes = parseTestMinutes(process.env.PLAN_TEST_MINUTES);
+
   /** Sent by the studio admin panel as X-Admin-Token. Unset disables the admin API. */
   readonly adminToken = process.env.ADMIN_TOKEN ?? '';
 
@@ -65,4 +71,13 @@ function parseMethods(value: string | undefined): ('CARD' | 'WALLET')[] {
   const unknown = methods.filter((method) => method !== 'CARD' && method !== 'WALLET');
   if (unknown.length) throw new Error(`SETTLEKING_PAYMENT_METHODS: unknown method ${unknown.join(', ')} (use card, wallet)`);
   return [...new Set(methods)] as ('CARD' | 'WALLET')[];
+}
+
+function parseTestMinutes(value: string | undefined): number | null {
+  if (!value?.trim()) return null;
+  const minutes = Number(value);
+  if (!Number.isInteger(minutes) || minutes < 10 || minutes > 1440) {
+    throw new Error('PLAN_TEST_MINUTES: use a whole number of minutes from 10 to 1440, or leave it empty');
+  }
+  return minutes;
 }

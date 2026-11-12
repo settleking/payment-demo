@@ -67,7 +67,7 @@ export class PlansService {
    * never proposes twice) and returns where the customer approves it.
    */
   async start(dto: StartPlanDto): Promise<StartedPlan> {
-    const plan = findPlan(dto.planId);
+    const plan = findPlan(dto.planId, this.config.planTestMinutes);
     if (!plan) throw new BadRequestException('Choose a plan');
     if (dto.approveVia === 'widget' && !this.config.widgetsConfigured) {
       throw new BadRequestException('Approving on this page is not available; continue to SettleKing.');
@@ -297,7 +297,7 @@ export class PlansService {
       ...base,
       amount: toMoney(plan.amount!, 'USD'),
       interval: plan.interval,
-      intervalCount: 1,
+      intervalCount: plan.intervalCount ?? 1,
       firstChargeAt: plan.trialDays
         ? new Date(Date.now() + plan.trialDays * 24 * 60 * 60_000).toISOString()
         : undefined,

@@ -8,6 +8,7 @@ import {
   money,
   Plan,
   PLAN_STATUS,
+  planInterval,
   planPrice,
   planTerms,
   SiteConfig,
@@ -190,7 +191,7 @@ function PlanCard({ plan, selected, onChoose }: { plan: Plan; selected: boolean;
           </>
         ) : (
           <>
-            {money(plan.amount ?? 0)} <small>/ {plan.interval}</small>
+            {money(plan.amount ?? 0)} <small>/ {planInterval(plan)}</small>
           </>
         )}
       </span>
