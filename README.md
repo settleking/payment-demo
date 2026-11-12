@@ -185,8 +185,9 @@ stores nothing, so the same Idempotency-Key is reused) and stops asking for ten 
   the same Idempotency-Key, so it can never charge twice.
 - The studio never trusts the browser or a webhook alone for state: both make it read the agreement
   and its charges from SettleKing (and so does the one-minute sweep).
-- "Cancel plan" on the plan page cancels at SettleKing (`POST …/agreements/<id>/cancel`); the plan's
-  unguessable id in the link is the only key, enough for a sample. Customers can also cancel in
+- "Cancel plan" on the plan page asks for the email the plan was started with and then cancels at
+  SettleKing (`POST …/agreements/<id>/cancel`); the plan's id alone is not enough (a wrong email is
+  `403`). A real site would use the customer's signed-in account. Customers can also cancel in
   SettleKing, and the studio learns it from the webhook.
 
 ## Security notes for widgets
@@ -278,6 +279,8 @@ Point your tunnel at `:5180` in that case, and add that origin to the widget's a
 
 | Variable | Purpose |
 | --- | --- |
+| `PORT` | Port the site listens on, default `4400` |
+| `STUDIO_NAME` | The studio's name on the page, default `Tempo Dance Studio` |
 | `PUBLIC_URL` | HTTPS origin of this site; the checkout's `returnUrl` is `<PUBLIC_URL>/?booking=<id>` |
 | `SETTLEKING_API_URL` | SettleKing API origin, default `https://api-v2.stage.settleking.com` |
 | `SETTLEKING_CHECKOUT_URL` | Hosted checkout base, default `https://pay.stage.settleking.com/checkout` |
@@ -296,6 +299,7 @@ Point your tunnel at `:5180` in that case, and add that origin to the widget's a
 
 | Method | Path | |
 | --- | --- | --- |
+| GET | `/api/health` | `{ "status": "ok" }` |
 | GET | `/api/classes` | The classes |
 | GET | `/api/config` | `{ studioName, widget: { publishableKey, payUrl } \| null, membership: { amount }, plans, payUrl, appUrl }` |
 | POST | `/api/bookings` | `{ classId, studentName, email, payWith?: "hosted" \| "widget" }`: returns `{ bookingId, checkoutUrl }` (hosted) or `{ bookingId, clientSecret }` (widget) |
@@ -308,7 +312,7 @@ Point your tunnel at `:5180` in that case, and add that origin to the widget's a
 | POST | `/api/plans` | `{ planId, name, email, approveVia: "hosted" \| "widget" }`: returns `{ planId, approvalUrl }` or `{ planId, clientSecret }` |
 | GET | `/api/plans/:id` | The plan (customer view: status, how it is paid, charges) |
 | POST | `/api/plans/:id/sync` | Read the agreement and its charges from SettleKing now |
-| POST | `/api/plans/:id/cancel` | Cancel the plan at SettleKing |
+| POST | `/api/plans/:id/cancel` | `{ email }` (the email the plan was started with, else `403`): cancel the plan at SettleKing |
 | GET | `/api/admin/plans` | Admin: every plan with its charges |
 | POST | `/api/admin/plans/:id/charges` | Admin: `{ classId }`, charge a pay-as-you-dance plan for that class |
 | POST | `/api/admin/plans/:id/sync` / `cancel` | Admin: re-read from SettleKing / cancel |
@@ -321,6 +325,9 @@ Point your tunnel at `:5180` in that case, and add that origin to the widget's a
 
 The studio admin page is at `/admin` (e.g. `https://dance.example.com/admin`); it
 asks for the admin token and keeps it for the browser tab only.
+
+Writes to `/api/bookings`, `/api/plans` and `/api/memberships` are limited to 30 a minute per IP
+address (`429` beyond that).
 
 ## Tests
 
