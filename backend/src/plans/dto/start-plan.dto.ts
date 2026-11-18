@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsEmail, IsIn, IsString, Length, MaxLength } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -21,4 +21,12 @@ export class StartPlanDto {
   /** hosted: send the customer to SettleKing's approval page; widget: approve from this page. */
   @IsIn(['hosted', 'widget'])
   approveVia!: 'hosted' | 'widget';
+
+  /**
+   * settleking: approve with a SettleKing account (wallet, card or bank account). email: without an
+   * account, by card or bank account with just this email; SettleKing's page opens on that path.
+   */
+  @IsOptional()
+  @IsIn(['settleking', 'email'])
+  account?: 'settleking' | 'email';
 }

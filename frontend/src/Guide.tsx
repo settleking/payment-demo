@@ -83,6 +83,23 @@ export function Guide() {
       ],
     },
     {
+      id: 'subscription-without-account',
+      kind: 'Subscription',
+      title: 'Weekly Practice without a SettleKing account',
+      where: 'Home › Plans › Weekly Practice › Without an account',
+      steps: [
+        'Enter a name and an email that has no SettleKing account, choose Without an account and continue.',
+        'On SettleKing: press Email me a code, enter the code from the email, choose Card or Bank account and add one.',
+        'Check the terms and the summary: only the fee of the method you chose is shown, with what each charge costs in total.',
+        'Tick “I agree” and approve, then return to the studio.',
+      ],
+      expect: [
+        'The studio shows Active, the fee per charge and “You pay each charge” with the fee included; no Manage in SettleKing link.',
+        'The first charge shows its total with the fee, e.g. “$16.00 ($15.00 + $1.00 fee)”, here and in Admin › Plans (marked “no SettleKing account”).',
+        'The studio can cancel it here or in Admin; SettleKing emails the customer a receipt for each charge.',
+      ],
+    },
+    {
       id: 'on-demand',
       kind: 'Charge when needed',
       title: 'Pay As You Dance: the studio charges after each class',

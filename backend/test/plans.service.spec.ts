@@ -227,6 +227,51 @@ describe('PlansService', () => {
     expect(plan().charges[0]).toMatchObject({ status: 'succeeded', amount: 1500, cycle: 1 });
   });
 
+  it('sends a customer without an account to SettleKing’s page on the email-only path', async () => {
+    const started = await plans.start({
+      planId: 'weekly',
+      name: 'Ada',
+      email: 'ada@example.test',
+      approveVia: 'widget',
+      account: 'email',
+    });
+
+    // Approved on SettleKing's page (not the widget), opened on "Continue without an account".
+    expect(started).toEqual({
+      planId: plan().id,
+      approvalUrl: `https://pay.example.test/agreements/${agreementId}?as=guest`,
+    });
+    expect(settleking.createWidgetSession).not.toHaveBeenCalled();
+    expect(plan()).toMatchObject({ approvedVia: 'hosted', withoutAccount: true });
+  });
+
+  it('keeps the guest flag, the fees and what each charge cost with its fee', async () => {
+    await plans.start({ planId: 'weekly', name: 'Ada', email: 'ada@example.test', approveVia: 'hosted', account: 'email' });
+    settleking.getAgreement.mockResolvedValue(
+      agreement({
+        status: 'active',
+        guest: true,
+        fees: { card: 45, ach: 100 },
+        funding: { method: 'ach', cardLast4: '3815' },
+      }),
+    );
+    settleking.agreementCharges.mockResolvedValue([
+      charge({
+        status: 'succeeded',
+        amount: { currency: 'USD', value: '15.00' },
+        fee: { currency: 'USD', value: '1.00' },
+        totalCharged: { currency: 'USD', value: '16.00' },
+        initiatedBy: 'schedule',
+        cycle: 1,
+      }),
+    ]);
+
+    const view = await plans.sync(plan().id);
+
+    expect(view).toMatchObject({ guest: true, fees: { card: 45, ach: 100 } });
+    expect(view.charges[0]).toMatchObject({ amount: 1500, fee: 100, totalCharged: 1600 });
+  });
+
   it('ignores an agreement whose reference is not the plan’s', async () => {
     await plans.start({ planId: 'weekly', name: 'Ada', email: 'ada@example.test', approveVia: 'hosted' });
     settleking.getAgreement.mockResolvedValue(agreement({ status: 'active', reference: 'SOMEONE-ELSE' }));

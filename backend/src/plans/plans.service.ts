@@ -69,7 +69,10 @@ export class PlansService {
   async start(dto: StartPlanDto): Promise<StartedPlan> {
     const plan = findPlan(dto.planId, this.config.planTestMinutes);
     if (!plan) throw new BadRequestException('Choose a plan');
-    if (dto.approveVia === 'widget' && !this.config.widgetsConfigured) {
+    // Without an account the customer approves on SettleKing's page, which opens on that path.
+    const withoutAccount = dto.account === 'email';
+    const approveVia = withoutAccount ? 'hosted' : dto.approveVia;
+    if (approveVia === 'widget' && !this.config.widgetsConfigured) {
       throw new BadRequestException('Approving on this page is not available; continue to SettleKing.');
     }
     if (!this.config.paymentsConfigured) throw new ServiceUnavailableException('Online payments are not set up yet.');
@@ -83,7 +86,8 @@ export class PlansService {
         type: plan.type,
         name: dto.name,
         email,
-        approvedVia: dto.approveVia,
+        approvedVia: approveVia,
+        withoutAccount,
         status: 'proposing',
         charges: [],
         chargeRequests: 0,
@@ -103,9 +107,12 @@ export class PlansService {
     }
     await this.applyAgreement(subscription.id, agreement);
 
-    if (dto.approveVia === 'hosted') {
+    if (approveVia === 'hosted') {
       if (!agreement.approvalUrl) throw new BadGatewayException('SettleKing returned no approval link.');
-      return { planId: subscription.id, approvalUrl: agreement.approvalUrl };
+      return {
+        planId: subscription.id,
+        approvalUrl: withoutAccount ? withoutAccountLink(agreement.approvalUrl) : agreement.approvalUrl,
+      };
     }
     try {
       const session = await this.settleking.createWidgetSession(
@@ -355,6 +362,8 @@ export class PlansService {
       plan.chargedThisMonth = toCents(agreement.chargedThisMonth) ?? undefined;
       plan.endedBy = agreement.endedBy;
       plan.endReason = agreement.endReason;
+      plan.guest = agreement.guest ?? false;
+      plan.fees = agreement.fees ?? null;
       if (charges) {
         // SettleKing's list is the truth; keep only the studio's own unanswered request on top.
         const unanswered = plan.charges.filter(
@@ -396,11 +405,22 @@ export class PlansService {
   }
 }
 
+/** SettleKing's approval page, opened straight on "Continue without an account". */
+export function withoutAccountLink(approvalUrl: string): string {
+  const url = new URL(approvalUrl);
+  url.searchParams.set('as', 'guest');
+  return url.toString();
+}
+
 function fromCharge(charge: AgreementCharge): PlanCharge {
+  const amount = toCents(charge.amount) ?? 0;
+  const fee = toCents(charge.fee) ?? 0;
   return {
     id: charge.id,
     status: charge.status,
-    amount: toCents(charge.amount) ?? 0,
+    amount,
+    fee,
+    totalCharged: toCents(charge.totalCharged) ?? amount + fee,
     cycle: charge.cycle,
     attempt: charge.attempt,
     reference: charge.reference,

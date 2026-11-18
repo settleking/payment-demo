@@ -19,8 +19,12 @@ export interface PlanCharge {
   /** SettleKing's charge id; absent while the studio's request has no answer yet. */
   id?: string;
   status: AgreementChargeStatus | 'requesting';
-  /** Cents. */
+  /** Cents: the price, without the card or bank fee. */
   amount: number;
+  /** Cents: the card or bank fee SettleKing added on top (0 when none). */
+  fee?: number;
+  /** Cents: what the customer paid, amount + fee. */
+  totalCharged?: number;
   cycle?: number | null;
   attempt?: number;
   reference?: string | null;
@@ -47,6 +51,12 @@ export interface Subscription {
   email: string;
   /** How the customer was sent to approve: SettleKing's page, or the widget in the studio's page. */
   approvedVia: 'hosted' | 'widget';
+  /** The customer chose to set it up without a SettleKing account (email only). */
+  withoutAccount?: boolean;
+  /** SettleKing: approved without an account, so the studio manages it. */
+  guest?: boolean;
+  /** Cents a card or bank account adds to each charge, per SettleKing. */
+  fees?: { card: number; ach: number } | null;
   agreementId?: string;
   approvalUrl?: string | null;
   widgetSessionId?: string;
@@ -80,6 +90,9 @@ export function customerView(plan: Subscription) {
     status: plan.status,
     approvedVia: plan.approvedVia,
     approvalUrl: plan.status === 'pending' ? plan.approvalUrl : undefined,
+    withoutAccount: plan.withoutAccount ?? false,
+    guest: plan.guest ?? false,
+    fees: plan.fees ?? null,
     funding: plan.funding,
     nextChargeAt: plan.nextChargeAt,
     chargedThisMonth: plan.chargedThisMonth,

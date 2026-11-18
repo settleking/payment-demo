@@ -5,10 +5,12 @@ import {
   AdminPlan,
   adminApi,
   CHARGE_STATUS,
+  chargeLabel,
   DanceClass,
   fundingLabel,
   money,
   PLAN_STATUS,
+  planFee,
   SiteConfig,
   when,
 } from './api';
@@ -109,6 +111,7 @@ export function AdminPlans({ token, config, classes }: { token: string; config: 
                 </strong>
                 <span className="muted">
                   {plan.email} · {plan.reference} · approved via {plan.approvedVia === 'widget' ? 'widget' : 'SettleKing page'}
+                  {plan.guest ? ' · no SettleKing account' : ''}
                 </span>
               </div>
               <span className={`chip ${plan.status}`}>{PLAN_STATUS[plan.status]}</span>
@@ -118,6 +121,15 @@ export function AdminPlans({ token, config, classes }: { token: string; config: 
                 <dt>Paying with</dt>
                 <dd>{fundingLabel(plan.funding)}</dd>
               </div>
+              {planFee(plan) > 0 && (
+                <div>
+                  <dt>Fee per charge</dt>
+                  <dd>
+                    {plan.type === 'on_demand' ? 'up to ' : ''}
+                    {money(planFee(plan))}
+                  </dd>
+                </div>
+              )}
               {plan.type === 'recurring' ? (
                 <div>
                   <dt>Next charge</dt>
@@ -143,7 +155,7 @@ export function AdminPlans({ token, config, classes }: { token: string; config: 
                 {plan.charges.slice(0, 6).map((charge, index) => (
                   <li key={charge.id ?? `pending-${index}`}>
                     <span>
-                      {when(charge.createdAt)} · {money(charge.amount)}
+                      {when(charge.createdAt)} · {chargeLabel(charge)}
                       {charge.description ? ` · ${charge.description}` : charge.cycle ? ` · cycle ${charge.cycle}` : ''}
                       {charge.viaDeposit ? ' · topped up from bank' : ''}
                     </span>

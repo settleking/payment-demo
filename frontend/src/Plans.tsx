@@ -3,11 +3,13 @@ import { FormEvent, useEffect, useState } from 'react';
 import {
   api,
   CHARGE_STATUS,
+  chargeLabel,
   CustomerPlan,
   fundingLabel,
   money,
   Plan,
   PLAN_STATUS,
+  planFee,
   planInterval,
   planPrice,
   planTerms,
@@ -17,6 +19,7 @@ import {
 import { PaymentWidget } from './Widget';
 
 type ApproveVia = 'widget' | 'hosted';
+type Account = 'settleking' | 'email';
 
 /**
  * Plans: each is a SettleKing payment agreement. The studio proposes the terms; the customer
@@ -28,11 +31,13 @@ export function Plans({ config, onApproved }: { config: SiteConfig; onApproved: 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [via, setVia] = useState<ApproveVia>(config.widget ? 'widget' : 'hosted');
+  const [account, setAccount] = useState<Account>('settleking');
   const [approving, setApproving] = useState<{ planId: string; clientSecret: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const plan = config.plans.find((candidate) => candidate.id === selected);
-  const method: ApproveVia = config.widget ? via : 'hosted';
+  // Without an account the customer goes to SettleKing's page, opened on the email-only path.
+  const method: ApproveVia = config.widget && account === 'settleking' ? via : 'hosted';
 
   function choose(id: string) {
     setSelected(id);
@@ -46,7 +51,7 @@ export function Plans({ config, onApproved }: { config: SiteConfig; onApproved: 
     setBusy(true);
     setError(null);
     try {
-      const started = await api.startPlan({ planId: plan.id, name, email, approveVia: method });
+      const started = await api.startPlan({ planId: plan.id, name, email, approveVia: method, account });
       if (started.clientSecret) {
         setApproving({ planId: started.planId, clientSecret: started.clientSecret });
         setBusy(false);
@@ -66,8 +71,8 @@ export function Plans({ config, onApproved }: { config: SiteConfig; onApproved: 
           <span className="kicker">Subscriptions &amp; pay as you go</span>
           <h2>Approve once. Dance all season.</h2>
           <p>
-            Approve a plan once with SettleKing and pay by SettleKing wallet, card or bank account. You see every charge, set your own
-            limits and can cancel at any time in your SettleKing account.
+            Approve a plan once with SettleKing. With a SettleKing account, pay by wallet, card or bank account and manage it in your
+            account. No account? Pay by card or bank account with just your email; the studio manages the plan for you.
           </p>
         </div>
 
@@ -102,7 +107,29 @@ export function Plans({ config, onApproved }: { config: SiteConfig; onApproved: 
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </label>
-              {config.widget && (
+              <fieldset className="choice">
+                <legend>How would you like to pay?</legend>
+                <label className={account === 'settleking' ? 'option selected' : 'option'}>
+                  <input
+                    type="radio"
+                    name="account"
+                    checked={account === 'settleking'}
+                    onChange={() => setAccount('settleking')}
+                  />
+                  <span>
+                    <strong>With my SettleKing account</strong>
+                    <span className="muted">Wallet, card or bank account; manage it in SettleKing</span>
+                  </span>
+                </label>
+                <label className={account === 'email' ? 'option selected' : 'option'}>
+                  <input type="radio" name="account" checked={account === 'email'} onChange={() => setAccount('email')} />
+                  <span>
+                    <strong>Without an account</strong>
+                    <span className="muted">Card or bank account, with just your email</span>
+                  </span>
+                </label>
+              </fieldset>
+              {config.widget && account === 'settleking' && (
                 <fieldset className="choice">
                   <legend>Where would you like to approve it?</legend>
                   <label className={method === 'widget' ? 'option selected' : 'option'}>
@@ -130,8 +157,9 @@ export function Plans({ config, onApproved }: { config: SiteConfig; onApproved: 
                 {busy ? 'Setting up…' : 'Continue to approve with SettleKing'}
               </button>
               <p className="fine">
-                Nothing is charged until you approve. You choose your wallet, a card or a bank account on SettleKing and confirm with a
-                code.
+                {account === 'email'
+                  ? 'Nothing is charged until you approve. On SettleKing you confirm your email with a code, add a card or bank account and see the exact amount of each charge, any card or bank fee included.'
+                  : 'Nothing is charged until you approve. You choose your wallet, a card or a bank account on SettleKing, see the exact amount of each charge with any fee, and confirm with a code.'}
               </p>
             </form>
           )}
@@ -299,8 +327,9 @@ export function PlanResult({ planId, config }: { planId: string; config: SiteCon
           {catalog && <p className="muted">{planTerms(catalog)}</p>}
           {status === 'suspended' && (
             <p className="notice">
-              A charge didn’t go through, so SettleKing paused the plan after one try. Resume it in your SettleKing
-              account to try once more.
+              {plan?.guest
+                ? 'A charge didn’t go through, so SettleKing paused the plan after one try. Contact the studio: we can resume it to try once more.'
+                : 'A charge didn’t go through, so SettleKing paused the plan after one try. Resume it in your SettleKing account to try once more.'}
             </p>
           )}
           {gaveUp && (status === 'pending' || status === 'proposing') && plan?.approvalUrl && (
@@ -326,6 +355,27 @@ export function PlanResult({ planId, config }: { planId: string; config: SiteCon
               <dt>Paying with</dt>
               <dd>{fundingLabel(plan.funding)}</dd>
             </div>
+            {planFee(plan) > 0 && (
+              <div>
+                <dt>{plan.funding?.method === 'ach' ? 'Bank account fee' : 'Card fee'}</dt>
+                <dd>
+                  {plan.type === 'on_demand' ? 'up to ' : ''}
+                  {money(planFee(plan))} per charge
+                </dd>
+              </div>
+            )}
+            {plan.type === 'recurring' && planFee(plan) > 0 && catalog?.amount != null && (
+              <div>
+                <dt>You pay each charge</dt>
+                <dd>{money(catalog.amount + planFee(plan))}</dd>
+              </div>
+            )}
+            {plan.guest && (
+              <div>
+                <dt>Account</dt>
+                <dd>None needed: the studio manages this plan</dd>
+              </div>
+            )}
             {plan.type === 'recurring' && (
               <div>
                 <dt>Next charge</dt>
@@ -350,7 +400,7 @@ export function PlanResult({ planId, config }: { planId: string; config: SiteCon
             {plan.charges.map((charge, index) => (
               <li key={charge.id ?? `pending-${index}`}>
                 <span>
-                  {when(charge.createdAt)} · {money(charge.amount)}
+                  {when(charge.createdAt)} · {chargeLabel(charge)}
                   {charge.viaDeposit ? ' · topped up from bank' : ''}
                 </span>
                 <span className={`chip ${charge.status}`}>{CHARGE_STATUS[charge.status]}</span>
@@ -371,9 +421,11 @@ export function PlanResult({ planId, config }: { planId: string; config: SiteCon
           <div className="member-actions" style={{ justifyContent: 'center' }}>
             {!confirmCancel ? (
               <>
-                <a className="pill ghost small" href={`${config.appUrl}/payment/agreements`} target="_blank" rel="noreferrer">
-                  Manage in SettleKing
-                </a>
+                {!plan.guest && (
+                  <a className="pill ghost small" href={`${config.appUrl}/payment/agreements`} target="_blank" rel="noreferrer">
+                    Manage in SettleKing
+                  </a>
+                )}
                 <button type="button" className="pill danger small" onClick={() => setConfirmCancel(true)}>
                   Cancel plan
                 </button>

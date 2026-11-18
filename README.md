@@ -151,7 +151,7 @@ stores nothing, so the same Idempotency-Key is reused) and stops asking for ten 
 ```text
  Browser                          Studio server                                   SettleKing
  ───────                          ─────────────                                   ──────────
- "Weekly Practice", name, email ▶ POST /api/plans { planId, approveVia }
+ "Weekly Practice", name, email ▶ POST /api/plans { planId, approveVia, account }
                                   ├─ records plan TDS-P1006 (proposing)
                                   └─ POST …/agreements  Idempotency-Key: <plan id>-agreement
                                      { type: recurring, reference: TDS-P1006,
@@ -160,6 +160,7 @@ stores nothing, so the same Idempotency-Key is reused) and stops asking for ten 
                                        returnUrl: https://<site>/?plan=<id>,
                                        payerEmail: <the email given here> }         ─▶ pending, approvalUrl
  approveVia hosted: ◀─ { approvalUrl } → the customer approves on SettleKing, then "Return to …"
+ account email:     ◀─ { approvalUrl + "?as=guest" } → SettleKing's page opens on "without an account"
  approveVia widget: ◀─ { clientSecret } of POST …/widget-sessions { mode: agreement, agreementId }
                     the frame opens SettleKing's approval page in a popup; "success" is a hint only
  /?plan=<id> ───────────────────▶ POST /api/plans/<id>/sync
@@ -175,7 +176,14 @@ stores nothing, so the same Idempotency-Key is reused) and stops asking for ten 
 ```
 
 - The studio sends the customer's email as `payerEmail`, so only the SettleKing account with that
-  email can approve the plan: a forwarded approval link is useless to anyone else.
+  email (or, without an account, someone who proves that email with a code) can approve the plan: a
+  forwarded approval link is useless to anyone else.
+- "Without an account" (`account: "email"`): the customer pays by card or bank account with just
+  their email, saved with the studio only; the agreement comes back with `guest: true` and the studio
+  manages it (cancel here or in the SettleKing merchant portal, which can also resume it).
+- When the studio passes a card or bank fee on, SettleKing shows the customer only the fee of the
+  method they choose and the total of each charge; agreements carry `fees` (cents per charge) and
+  each charge `fee` and `totalCharged`, which the plan pages show.
 - The terms come from the studio's own catalog (`backend/src/plans/plan.catalog.ts`); the customer
   sees and approves exactly those on SettleKing, with an emailed code. SettleKing refuses any charge
   outside them (and outside the customer's own limits) with a reason and moves no money.

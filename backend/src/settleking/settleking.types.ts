@@ -281,6 +281,15 @@ export interface Agreement {
   endedAt?: string | null;
   endedBy?: 'payer' | 'merchant' | 'system' | null;
   endReason?: string | null;
+  /** Approved without a SettleKing account: the studio manages it (cancel, resume). */
+  guest?: boolean;
+  /** That customer's email, as they confirmed it to SettleKing. */
+  customerEmail?: string | null;
+  /**
+   * The fee a card or a bank account adds to each charge, in cents (on the most per charge for
+   * charges when needed); null or 0 when the studio passes no fee on. Wallet charges have none.
+   */
+  fees?: { card: number; ach: number } | null;
 }
 
 export type AgreementChargeStatus = 'processing' | 'succeeded' | 'failed' | 'rejected' | 'returned';
@@ -290,7 +299,12 @@ export interface AgreementCharge {
   id: string;
   agreementId: string;
   status: AgreementChargeStatus;
+  /** The price, without the card or bank fee. */
   amount: Money;
+  /** The card or bank fee added on top (0.00 when none). */
+  fee?: Money | null;
+  /** What the customer paid: amount + fee. */
+  totalCharged?: Money | null;
   cycle?: number | null;
   attempt: number;
   fundingMethod?: 'wallet' | 'card' | 'ach' | null;

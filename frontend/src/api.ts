@@ -43,7 +43,12 @@ export type PlanStatus = 'proposing' | 'pending' | 'active' | 'suspended' | 'can
 export interface PlanCharge {
   id?: string;
   status: 'requesting' | 'processing' | 'succeeded' | 'failed' | 'rejected' | 'returned';
+  /** Cents: the price, without the card or bank fee. */
   amount: number;
+  /** Cents: the card or bank fee added on top (0 when none). */
+  fee?: number;
+  /** Cents: what the customer paid. */
+  totalCharged?: number;
   cycle?: number | null;
   attempt?: number;
   reference?: string | null;
@@ -68,6 +73,12 @@ export interface CustomerPlan {
   status: PlanStatus;
   approvedVia: 'hosted' | 'widget';
   approvalUrl?: string | null;
+  /** The customer chose to set it up with just an email. */
+  withoutAccount?: boolean;
+  /** Approved without a SettleKing account: the studio manages it. */
+  guest?: boolean;
+  /** Cents a card or bank account adds to each charge. */
+  fees?: { card: number; ach: number } | null;
   funding?: { method: 'wallet' | 'card' | 'ach'; cardBrand?: string | null; cardLast4?: string | null } | null;
   nextChargeAt?: string | null;
   chargedThisMonth?: number;
@@ -177,7 +188,13 @@ export const api = {
   joinMembership: (body: { name: string; email: string }) =>
     request<{ memberId: string; clientSecret: string }>('/memberships', { method: 'POST', body: JSON.stringify(body) }),
   /** Proposes the plan; returns SettleKing's approval link (hosted) or a widget client secret. */
-  startPlan: (body: { planId: string; name: string; email: string; approveVia: 'hosted' | 'widget' }) =>
+  startPlan: (body: {
+    planId: string;
+    name: string;
+    email: string;
+    approveVia: 'hosted' | 'widget';
+    account: 'settleking' | 'email';
+  }) =>
     request<{ planId: string; approvalUrl?: string; clientSecret?: string }>('/plans', {
       method: 'POST',
       body: JSON.stringify(body),
@@ -263,6 +280,20 @@ export function fundingLabel(funding: CustomerPlan['funding']): string {
   if (funding.method === 'ach') return funding.cardLast4 ? `Bank account •••• ${funding.cardLast4}` : 'Bank account';
   const brand = funding.cardBrand ? funding.cardBrand[0].toUpperCase() + funding.cardBrand.slice(1) : 'Card';
   return `${brand} •••• ${funding.cardLast4 ?? '????'}`;
+}
+
+/** The fee each charge carries for how the plan is paid, in cents (0: none, or the wallet). */
+export function planFee(plan: Pick<CustomerPlan, 'fees' | 'funding'>): number {
+  const method = plan.funding?.method;
+  if (method !== 'card' && method !== 'ach') return 0;
+  return plan.fees?.[method] ?? 0;
+}
+
+/** "$16.00 ($15.00 + $1.00 fee)" for a charge with a fee; the amount alone otherwise. */
+export function chargeLabel(charge: Pick<PlanCharge, 'amount' | 'fee' | 'totalCharged'>): string {
+  const fee = charge.fee ?? 0;
+  if (fee <= 0) return money(charge.amount);
+  return `${money(charge.totalCharged ?? charge.amount + fee)} (${money(charge.amount)} + ${money(fee)} fee)`;
 }
 
 export function when(iso?: string | null): string {
