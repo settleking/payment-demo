@@ -93,9 +93,47 @@ describe('BookingsService', () => {
         reference: booked().reference,
         amount: { currency: 'USD', value: '25.00' },
         returnUrl: `https://dance.example.test/?booking=${booked().id}`,
+        customerEmail: 'ana@example.test',
       }),
       booked().id,
     );
+  });
+
+  it('records the fee and every refund SettleKing reports, once each', async () => {
+    await book();
+    const paid = delivery({
+      checkoutSessionId: 'chk_1',
+      amount: salsa,
+      paymentMethod: 'card',
+      providerTransactionId: '10123456789',
+      fee: { currency: 'USD', value: '0.93' },
+    });
+    await webhooks.receive(paid.raw, paid.headers);
+    expect(booked()).toMatchObject({ status: 'paid', fee: 93, providerTransactionId: '10123456789' });
+
+    const part = delivery(
+      { checkoutSessionId: 'chk_1', refundId: 'r1', amount: { currency: 'USD', value: '10.00' }, kind: 'refund' },
+      'msg_r1',
+      'MERCHANT_PAYMENT_REFUNDED',
+    );
+    await expect(webhooks.receive(part.raw, part.headers)).resolves.toEqual({ outcome: 'applied' });
+    expect(booked()).toMatchObject({ status: 'paid', refundedAmount: 1000 });
+
+    const again = delivery(
+      { checkoutSessionId: 'chk_1', refundId: 'r1', amount: { currency: 'USD', value: '10.00' }, kind: 'refund' },
+      'msg_r1b',
+      'MERCHANT_PAYMENT_REFUNDED',
+    );
+    await webhooks.receive(again.raw, again.headers);
+    expect(booked().refundedAmount).toBe(1000);
+
+    const rest = delivery(
+      { checkoutSessionId: 'chk_1', refundId: 'r2', amount: { currency: 'USD', value: '15.93' }, kind: 'refund' },
+      'msg_r2',
+      'MERCHANT_PAYMENT_REFUNDED',
+    );
+    await webhooks.receive(rest.raw, rest.headers);
+    expect(booked()).toMatchObject({ status: 'refunded', refundedAmount: 2593 });
   });
 
   it('marks the booking paid from a signed webhook, once', async () => {

@@ -11,16 +11,18 @@ import { randomUUID } from 'node:crypto';
 
 import { DanceClass, findClass } from '../catalog/catalog.data';
 import { AppConfig } from '../config';
-import { isAmount, toMoney } from '../settleking/money';
+import { isAmount, toCents, toMoney } from '../settleking/money';
 import { isCapabilityMissing, SettleKingClient, SettleKingError } from '../settleking/settleking.client';
 import {
   Money,
   PAYMENT_FAILED,
   PAYMENT_RECEIVED,
+  PAYMENT_REFUNDED,
   PAYMENT_REVERSED,
   PaymentFailed,
   PaymentMethodName,
   PaymentReceived,
+  PaymentRefunded,
   PaymentReversed,
   SavePaymentMethod,
   SettleKingWebhook,
@@ -38,6 +40,8 @@ interface PaymentFacts {
   paymentMethod?: PaymentMethodName;
   providerTransactionId?: string | null;
   paidAt?: string | null;
+  /** The card or bank fee paid on top of the price, when any. */
+  fee?: Money | null;
 }
 
 /** How the page continues: to the hosted page (checkoutUrl), or with the widget (clientSecret). */
@@ -136,6 +140,9 @@ export class BookingsService {
       case PAYMENT_REVERSED:
         await this.applyReversal(booking.id, event.data as unknown as PaymentReversed);
         return booking.reference;
+      case PAYMENT_REFUNDED:
+        await this.applyRefund(booking.id, event.data as unknown as PaymentRefunded);
+        return booking.reference;
       case PAYMENT_FAILED: {
         // Declined cards in a widget can be retried there; the booking waits for a payment or expiry.
         const failed = event.data as unknown as PaymentFailed;
@@ -191,6 +198,9 @@ export class BookingsService {
         description: this.description(booking),
         // SettleKing sends the customer back here after paying.
         returnUrl: `${this.config.publicUrl}/?booking=${booking.id}`,
+        // A customer paying without a SettleKing account gets the receipt (and any refund
+        // notice) at this address.
+        customerEmail: booking.email,
       },
       // Safe to retry: the same key always returns the same checkout.
       booking.id,
@@ -277,6 +287,7 @@ export class BookingsService {
       booking.status = 'paid';
       booking.paymentMethod = payment.paymentMethod;
       booking.providerTransactionId = payment.providerTransactionId ?? undefined;
+      booking.fee = payment.fee ? (toCents(payment.fee) ?? 0) : 0;
       booking.paidAt = payment.paidAt ?? new Date().toISOString();
       booking.confirmedBy = source;
       this.logger.log(`${booking.reference} paid (confirmed by ${source})`);
@@ -293,6 +304,25 @@ export class BookingsService {
       if (booking.checkoutSessionId !== reversal.checkoutSessionId || booking.status !== 'paid') return;
       booking.status = 'payment_reversed';
       this.logger.warn(`${booking.reference} payment reversed (${reversal.reason})`);
+    });
+  }
+
+  /**
+   * The studio refunded the booking (from its SettleKing portal or the API): the webhook names the
+   * checkout and the studio's own reference, so the booking is found without guessing. Each refund
+   * counts once; a full refund (or a void) marks the booking refunded.
+   */
+  private applyRefund(id: string, refund: PaymentRefunded): Promise<Booking> {
+    return this.change(id, (booking) => {
+      if (booking.checkoutSessionId !== refund.checkoutSessionId) return;
+      const seen = booking.refundIds ?? [];
+      if (seen.includes(refund.refundId)) return;
+      booking.refundIds = [...seen, refund.refundId];
+      booking.refundedAmount = (booking.refundedAmount ?? 0) + (toCents(refund.amount) ?? 0);
+      if (refund.kind === 'void' || booking.refundedAmount >= booking.amount + (booking.fee ?? 0)) {
+        booking.status = 'refunded';
+      }
+      this.logger.log(`${booking.reference} refunded ${refund.amount.value} (${refund.kind})`);
     });
   }
 

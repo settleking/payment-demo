@@ -1,7 +1,7 @@
 import type { PaymentMethodName } from '../settleking/settleking.types';
 
 /** A class booking and its payment state. */
-export type BookingStatus = 'pending_payment' | 'paid' | 'payment_reversed' | 'expired' | 'cancelled';
+export type BookingStatus = 'pending_payment' | 'paid' | 'payment_reversed' | 'refunded' | 'expired' | 'cancelled';
 
 export interface Booking {
   id: string;
@@ -24,7 +24,13 @@ export interface Booking {
   /** SettleKing's customer for this email ("Pay here" only); a card the customer saves belongs to it. */
   customerId?: string;
   paymentMethod?: PaymentMethodName;
+  /** The gateway's (NMI's) id for the sale: what the studio sees in its NMI portal. */
   providerTransactionId?: string;
+  /** Cents of card or bank fee the customer paid on top of the price. */
+  fee?: number;
+  /** Cents refunded so far, and each refund SettleKing reported (by its refund id). */
+  refundedAmount?: number;
+  refundIds?: string[];
   paidAt?: string;
   /** Which path confirmed the payment first: the signed webhook or the server-side lookup. */
   confirmedBy?: 'webhook' | 'lookup';
@@ -55,6 +61,9 @@ export function adminBookingView(booking: Booking) {
     ...publicView(booking),
     email: booking.email,
     checkoutSessionId: booking.checkoutSessionId,
+    providerTransactionId: booking.providerTransactionId,
+    fee: booking.fee ?? 0,
+    refundedAmount: booking.refundedAmount ?? 0,
     confirmedBy: booking.confirmedBy,
     createdAt: booking.createdAt,
   };

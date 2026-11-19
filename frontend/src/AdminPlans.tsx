@@ -143,7 +143,7 @@ export function AdminPlans({ token, config, classes }: { token: string; config: 
               )}
               <div>
                 <dt>Agreement</dt>
-                <dd>{plan.agreementId ? `${plan.agreementId.slice(0, 8)}…` : '—'}</dd>
+                <dd>{plan.agreementId ? <code title="SettleKing agreement ID">{plan.agreementId}</code> : '—'}</dd>
               </div>
               <div>
                 <dt>Ended</dt>
@@ -164,6 +164,12 @@ export function AdminPlans({ token, config, classes }: { token: string; config: 
                       {charge.failureCode ? ` · ${charge.failureCode}` : ''}
                     </span>
                     {charge.failureMessage && <span className="why">{charge.failureMessage}</span>}
+                    {(charge.reference || charge.checkoutSessionId) && (
+                      <span className="why ids">
+                        {charge.reference ?? ''}
+                        {charge.checkoutSessionId ? ` · SettleKing payment ${charge.checkoutSessionId}` : ''}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -226,6 +232,7 @@ const BOOKING_STATUS: Record<AdminBooking['status'], string> = {
   pending_payment: 'Waiting for payment',
   paid: 'Paid',
   payment_reversed: 'Reversed',
+  refunded: 'Refunded',
   expired: 'Expired',
   cancelled: 'Cancelled',
 };
@@ -234,6 +241,7 @@ const BOOKING_CHIP: Record<AdminBooking['status'], string> = {
   pending_payment: 'pending',
   paid: 'paid',
   payment_reversed: 'reversed',
+  refunded: 'reversed',
   expired: 'failed',
   cancelled: 'failed',
 };
@@ -270,13 +278,18 @@ export function AdminBookings({ token }: { token: string }) {
       )}
       {bookings && bookings.length === 0 && <p className="muted center">No bookings yet.</p>}
       {bookings && bookings.length > 0 && (
-        <div className="table-wrap" style={{ maxWidth: 820, margin: '0 auto' }}>
+        <div className="table-wrap" style={{ maxWidth: 1080, margin: '0 auto' }}>
+          <p className="muted" style={{ margin: 0, padding: '14px 16px 10px' }}>
+            Each booking's reference (TDS-…) is sent to SettleKing as the payment's reference. In the SettleKing
+            portal, search Payment history for the TDS reference or the SettleKing payment ID below.
+          </p>
           <table>
             <thead>
               <tr>
                 <th>Booking</th>
                 <th>Class</th>
                 <th>Paid with</th>
+                <th>SettleKing payment</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -291,7 +304,14 @@ export function AdminBookings({ token }: { token: string }) {
                   </td>
                   <td>
                     {booking.title}
-                    <div className="muted">{money(booking.amount)}</div>
+                    <div className="muted">
+                      {(booking.fee ?? 0) > 0
+                        ? `${money(booking.amount + (booking.fee ?? 0))} (${money(booking.amount)} + ${money(booking.fee ?? 0)} fee)`
+                        : money(booking.amount)}
+                    </div>
+                    {(booking.refundedAmount ?? 0) > 0 && (
+                      <div className="muted">Refunded {money(booking.refundedAmount ?? 0)}</div>
+                    )}
                   </td>
                   <td>
                     {booking.channel === 'widget' ? 'Pay here' : 'SettleKing checkout'}
@@ -299,6 +319,20 @@ export function AdminBookings({ token }: { token: string }) {
                       {booking.paymentMethod ?? '—'}
                       {booking.confirmedBy ? ` · confirmed by ${booking.confirmedBy}` : ''}
                     </div>
+                  </td>
+                  <td className="ids">
+                    {booking.checkoutSessionId ? (
+                      <code title="SettleKing payment ID (checkoutSessionId)" data-testid="sk-payment-id">
+                        {booking.checkoutSessionId}
+                      </code>
+                    ) : (
+                      '—'
+                    )}
+                    {booking.providerTransactionId && (
+                      <div className="muted" title="Card processor transaction ID">
+                        Processor ID {booking.providerTransactionId}
+                      </div>
+                    )}
                   </td>
                   <td>
                     <span className={`chip ${BOOKING_CHIP[booking.status]}`}>{BOOKING_STATUS[booking.status]}</span>

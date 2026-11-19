@@ -90,7 +90,14 @@ export interface CustomerPlan {
 /** A booking as the studio admin sees it. */
 export interface AdminBooking extends Booking {
   email: string;
+  /** SettleKing's payment id: search it (or the TDS reference) in the SettleKing portal. */
   checkoutSessionId?: string;
+  /** The gateway's (NMI's) transaction id. */
+  providerTransactionId?: string;
+  /** Cents of card or bank fee the customer paid on top of the price. */
+  fee?: number;
+  /** Cents refunded so far. */
+  refundedAmount?: number;
   confirmedBy?: 'webhook' | 'lookup';
   paidAt?: string;
   createdAt: string;
@@ -112,7 +119,7 @@ export interface Booking {
   title: string;
   studentName: string;
   amount: number;
-  status: 'pending_payment' | 'paid' | 'payment_reversed' | 'expired' | 'cancelled';
+  status: 'pending_payment' | 'paid' | 'payment_reversed' | 'refunded' | 'expired' | 'cancelled';
   channel: 'hosted' | 'widget';
   checkoutUrl?: string;
   paymentMethod?: 'card' | 'wallet' | 'ach';

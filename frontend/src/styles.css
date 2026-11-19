@@ -1082,3 +1082,14 @@ tr:last-child td {
     display: none;
   }
 }
+
+/* SettleKing ids next to the studio's own references: long, so they wrap. */
+.ids code,
+code.ids {
+  font-size: 0.75rem;
+  word-break: break-all;
+}
+.charges .why.ids {
+  color: var(--muted);
+  word-break: break-all;
+}

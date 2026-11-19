@@ -224,6 +224,10 @@ function ChargeLine({ charge }: { charge: MemberCharge }) {
     <p className={`charge ${charge.status}`} role="status">
       {charge.period} · {money(charge.amount)} · {label[charge.status]}
       {charge.attempt > 1 ? ` · attempt ${charge.attempt}` : ''}
+      <span className="ids" style={{ display: 'block', fontSize: '0.75rem' }}>
+        {charge.reference}
+        {charge.paymentId ? ` · SettleKing payment ${charge.paymentId}` : ''}
+      </span>
     </p>
   );
 }

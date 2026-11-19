@@ -19,6 +19,8 @@ export interface CreateCheckoutRequest {
   paymentMethods?: ('CARD' | 'WALLET')[];
   /** ISO instant, at most seven days ahead; SettleKing's default applies when omitted. */
   expiresAt?: string;
+  /** The customer's email: a customer without a SettleKing account gets the receipt there. */
+  customerEmail?: string;
 }
 
 /** The session as returned when it is created. */
@@ -45,6 +47,8 @@ export interface MerchantCheckout {
   expiresAt: string;
   paidAt?: string | null;
   providerTransactionId?: string | null;
+  /** The card or bank fee the customer paid on top of {@code amount} (null when none). */
+  fee?: Money | null;
 }
 
 export type CheckoutStatus = 'open' | 'processing' | 'paid' | 'expired' | 'cancelled' | 'reversed' | 'failed';
@@ -164,6 +168,10 @@ export interface PaymentReceived {
   origin?: 'hosted' | 'widget' | 'merchant_initiated' | 'agreement';
   customerId?: string;
   paymentMethodId?: string;
+  /** The card or bank fee the customer paid on top of {@code amount}, when any. */
+  fee?: Money;
+  /** {@code amount} plus {@code fee}: what the customer was charged. */
+  totalCharged?: Money;
 }
 
 export const PAYMENT_RECEIVED = 'MERCHANT_PAYMENT_RECEIVED';
@@ -214,6 +222,23 @@ export interface PaymentReversed {
 }
 
 export const PAYMENT_REVERSED = 'MERCHANT_PAYMENT_REVERSED';
+
+/**
+ * {@code data} of a MERCHANT_PAYMENT_REFUNDED webhook: the studio refunded all or part of a paid
+ * checkout (or voided a sale before it settled). One event per refund.
+ */
+export interface PaymentRefunded {
+  checkoutSessionId: string;
+  reference: string;
+  refundId: string;
+  amount: Money;
+  kind: 'refund' | 'void';
+  paymentMethod: PaymentMethodName;
+  providerTransactionId: string | null;
+  refundedAt: string;
+}
+
+export const PAYMENT_REFUNDED = 'MERCHANT_PAYMENT_REFUNDED';
 
 /**
  * A payment agreement: the customer's standing permission, approved once on SettleKing, for the
