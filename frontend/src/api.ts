@@ -236,8 +236,14 @@ export function adminApi(token: string) {
   };
 }
 
+/** "$15" for whole dollars, otherwise always two decimals ("$15.50", never "$15.5"). */
 export const money = (cents: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(cents / 100);
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
 
 export const cardLabel = (card?: CardSummary) =>
   card ? `${card.brand ? card.brand[0].toUpperCase() + card.brand.slice(1) : 'Card'} •••• ${card.last4 ?? '????'}` : '';
